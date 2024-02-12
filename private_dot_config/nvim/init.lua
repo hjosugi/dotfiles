@@ -5,7 +5,7 @@ if not vim.loop.fs_stat(lazypath) then
     'clone',
     '--filter=blob:none',
     'https://github.com/folke/lazy.nvim.git',
-    '--branch=stable', -- latest stable release
+    '--branch=stable',
     lazypath,
   })
 end
@@ -13,7 +13,12 @@ vim.opt.rtp:prepend(lazypath)
 
 require('lazy').setup({
   'jayp0521/mason-null-ls.nvim',
-  'L3MON4D3/LuaSnip',
+  {
+    "L3MON4D3/LuaSnip",
+    version = "v2.*",
+    build = "make install_jsregexp",
+    dependencies = { "rafamadriz/friendly-snippets", 'saadparwaiz1/cmp_luasnip' },
+  },
   'dinhhuy258/git.nvim',
   'lewis6991/gitsigns.nvim',
   'vim-jp/vimdoc-ja',
@@ -35,7 +40,7 @@ require('lazy').setup({
   'nvim-lua/plenary.nvim',
   'nvim-lua/telescope.nvim',
   'nvim-lualine/lualine.nvim',
-  { "lukas-reineke/indent-blankline.nvim", main = "ibl", opts = {} },
+  { "lukas-reineke/indent-blankline.nvim", main = "ibl",       opts = {} },
   {
     "tversteeg/registers.nvim",
     cmd = "Registers",
@@ -47,20 +52,22 @@ require('lazy').setup({
     name = "registers",
   },
 
-  {"nvim-treesitter/nvim-treesitter", build = ":TSUpdate"},
+  { "nvim-treesitter/nvim-treesitter",     build = ":TSUpdate" },
   'sainnhe/gruvbox-material',
   'github/copilot.vim',
   'ahmedkhalf/project.nvim',
-  {'romgrk/barbar.nvim',
+  {
+    'romgrk/barbar.nvim',
     dependencies = {
-      'lewis6991/gitsigns.nvim', 
-      'nvim-tree/nvim-web-devicons', 
+      'lewis6991/gitsigns.nvim',
+      'nvim-tree/nvim-web-devicons',
     },
     init = function() vim.g.barbar_auto_setup = false end,
     opts = {
 
     },
-    version = '^1.0.0',  },
+    version = '^1.0.0',
+  },
   {
     'numToStr/Comment.nvim',
     opts = {}
@@ -195,6 +202,13 @@ vim.keymap.set({ 'n' }, '<Plug>(lsp)rf', '<Cmd>Telescope lsp_references<CR>')
 -- nvim-cmp
 local cmp = require('cmp')
 local lspkind = require('lspkind')
+local map = cmp.mapping
+require("luasnip.loaders.from_vscode").lazy_load()
+
+local has_words_before = function()
+  local line, col = unpack(vim.api.nvim_win_get_cursor(0))
+  return col ~= 0 and vim.api.nvim_buf_get_lines(0, line - 1, line, true)[1]:sub(col, col):match '%s' == nil
+end
 
 cmp.setup({
   enabled = true,
@@ -203,6 +217,27 @@ cmp.setup({
     ['<C-d>'] = cmp.mapping.scroll_docs(4),
     ['<C-Space>'] = cmp.mapping.complete(),
     ['<CR>'] = cmp.mapping.confirm({ select = true }),
+    ['<Tab>'] = map(function(fallback)
+      if cmp.visible() then
+        cmp.select_next_item()
+      elseif luasnip.expand_or_jumpable() then
+        luasnip.expand_or_jump()
+      elseif has_words_before() then
+        cmp.complete()
+      else
+        fallback()
+      end
+    end, { 'i', 's' }),
+
+    ['<S-Tab>'] = map(function(fallback)
+      if cmp.visible() then
+        cmp.select_prev_item()
+      elseif luasnip.jumpable(-1) then
+        luasnip.jump(-1)
+      else
+        fallback()
+      end
+    end, { 'i', 's' }),
   }),
   window = {
     completion = cmp.config.window.bordered(),
@@ -212,12 +247,18 @@ cmp.setup({
     { name = 'nvim_lsp' },
     { name = 'buffer' },
     { name = 'path' },
+    { name = 'luasnip' },
   }),
   formatting = {
     fields = { 'abbr', 'kind', 'menu' },
     format = lspkind.cmp_format({
       mode = 'text',
     }),
+  },
+  snippet = {
+    expand = function(args)
+      luasnip.lsp_expand(args.body)
+    end,
   },
 })
 
@@ -227,7 +268,7 @@ local status, treesitter = pcall(require, "nvim-treesitter.configs")
 if (not status) then return end
 
 treesitter.setup {
-  ensure_installed = {"vim",
+  ensure_installed = { "vim",
     "dockerfile",
     "typescript",
     "tsx",
@@ -250,9 +291,9 @@ treesitter.setup {
     additional_vim_regex_highlighting = false, -- catpuucin用
     disable = {},
   },
-  indent ={
-    enable =true,
-    disable ={
+  indent = {
+    enable = true,
+    disable = {
       -- "html"
     },
   },
@@ -269,7 +310,7 @@ vim.cmd.colorscheme('gruvbox-material')
 require("oil").setup()
 vim.keymap.set("n", "-", "<CMD>Oil<CR>", { desc = "Open parent directory" })
 
-vim.opt.clipboard:append{'unnamedplus'}
+vim.opt.clipboard:append { 'unnamedplus' }
 
 
 -- bufferline close setting
@@ -288,4 +329,3 @@ vim.keymap.set('n', '[b', '<CMD>BufferLineMovePrev<CR>')
 vim.keymap.set('n', 'gs', '<CMD>BufferLineSortByDirectory<CR>')
 
 require("ibl").setup()
-
