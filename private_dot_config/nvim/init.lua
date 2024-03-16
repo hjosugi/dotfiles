@@ -40,6 +40,15 @@ require('lazy').setup({
   'nvim-lua/plenary.nvim',
   'nvim-lua/telescope.nvim',
   'nvim-lualine/lualine.nvim',
+  {
+    "kylechui/nvim-surround",
+    version = "*", -- Use for stability; omit to use `main` branch for the latest features
+    event = "VeryLazy",
+    config = function()
+      require("nvim-surround").setup({
+      })
+    end
+  },
   { "lukas-reineke/indent-blankline.nvim", main = "ibl",       opts = {} },
   {
     "tversteeg/registers.nvim",
@@ -91,11 +100,15 @@ vim.keymap.set({ 'n', 'x' }, '<Space>', '<Nop>')
 vim.keymap.set({ 'n', 'x' }, '<Plug>(lsp)', '<Nop>')
 vim.keymap.set({ 'n', 'x' }, 'm', '<Plug>(lsp)')
 vim.keymap.set({ 'n', 'x' }, '<Plug>(ff)', '<Nop>')
-vim.keymap.set({ 'n', 'x' }, ';', '<Plug>(ff)')
+-- vim.keymap.set({ 'n', 'x' }, ';', '<Plug>(ff)')
 
 -- telescope.nvim
 require('telescope').setup({
   defaults = {
+    file_ignore_patterns = { --検索対象に含めないファイルを指定
+      "^.git/",
+      "^node_modules/",
+    },
     mappings = {
       n = {
         ['<Esc>'] = require('telescope.actions').close,
@@ -107,10 +120,11 @@ require('telescope').setup({
     },
   },
 })
-vim.keymap.set({ 'n' }, '<Plug>(ff)r', '<Cmd>Telescope find_files<CR>')
-vim.keymap.set({ 'n' }, '<Plug>(ff)s', '<Cmd>Telescope git_status<CR>')
-vim.keymap.set({ 'n' }, '<Plug>(ff)b', '<Cmd>Telescope buffers<CR>')
-vim.keymap.set({ 'n' }, '<Plug>(ff)f', '<Cmd>Telescope live_grep<CR>')
+local builtin = require('telescope.builtin')
+vim.keymap.set('n', '<leader>ff', builtin.find_files, {})
+vim.keymap.set('n', '<leader>fg', builtin.live_grep, {})
+vim.keymap.set('n', '<leader>fb', builtin.buffers, {})
+vim.keymap.set('n', '<leader>fh', builtin.help_tags, {})
 
 -- nvim-lsp
 local lsp_config = require('lspconfig')
@@ -203,12 +217,18 @@ vim.keymap.set({ 'n' }, '<Plug>(lsp)rf', '<Cmd>Telescope lsp_references<CR>')
 local cmp = require('cmp')
 local lspkind = require('lspkind')
 local map = cmp.mapping
+local ls = require("luasnip")
+
 require("luasnip.loaders.from_vscode").lazy_load()
 
 local has_words_before = function()
   local line, col = unpack(vim.api.nvim_win_get_cursor(0))
   return col ~= 0 and vim.api.nvim_buf_get_lines(0, line - 1, line, true)[1]:sub(col, col):match '%s' == nil
 end
+
+ls.config.set_config({
+  history = true,
+})
 
 cmp.setup({
   enabled = true,
@@ -217,27 +237,13 @@ cmp.setup({
     ['<C-d>'] = cmp.mapping.scroll_docs(4),
     ['<C-Space>'] = cmp.mapping.complete(),
     ['<CR>'] = cmp.mapping.confirm({ select = true }),
-    ['<Tab>'] = map(function(fallback)
-      if cmp.visible() then
-        cmp.select_next_item()
-      elseif luasnip.expand_or_jumpable() then
+    ['<C-k>'] = cmp.mapping(function(fallback)
+      if luasnip.expand_or_jumpable() then
         luasnip.expand_or_jump()
-      elseif has_words_before() then
-        cmp.complete()
       else
         fallback()
       end
-    end, { 'i', 's' }),
-
-    ['<S-Tab>'] = map(function(fallback)
-      if cmp.visible() then
-        cmp.select_prev_item()
-      elseif luasnip.jumpable(-1) then
-        luasnip.jump(-1)
-      else
-        fallback()
-      end
-    end, { 'i', 's' }),
+    end, { "i", "s" }),
   }),
   window = {
     completion = cmp.config.window.bordered(),
@@ -287,7 +293,7 @@ treesitter.setup {
     "rust",
   },
   highlight = {
-    enable = true,
+    enable = false,
     additional_vim_regex_highlighting = false, -- catpuucin用
     disable = {},
   },
@@ -329,3 +335,12 @@ vim.keymap.set('n', '[b', '<CMD>BufferLineMovePrev<CR>')
 vim.keymap.set('n', 'gs', '<CMD>BufferLineSortByDirectory<CR>')
 
 require("ibl").setup()
+
+local map = vim.api.nvim_set_keymap
+local opts = { noremap = true, silent = true }
+
+-- Move to previous/next
+map('n', '<C-j>', '<Cmd>BufferPrevious<CR>', opts)
+map('n', '<C-k>', '<Cmd>BufferNext<CR>', opts)
+-- Close buffer
+map('n', '<leader>e', '<Cmd>BufferClose<CR>', opts)
