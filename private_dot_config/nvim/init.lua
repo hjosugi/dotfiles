@@ -12,6 +12,21 @@ end
 vim.opt.rtp:prepend(lazypath)
 
 require('lazy').setup({
+  {
+    "kdheepak/lazygit.nvim",
+    cmd = {
+      "LazyGit",
+      "LazyGitConfig",
+      "LazyGitCurrentFile",
+      "LazyGitFilter",
+      "LazyGitFilterCurrentFile",
+    },
+    -- optional for floating window border decoration
+    dependencies = {
+      "nvim-lua/plenary.nvim",
+    },
+  },
+  {'akinsho/toggleterm.nvim', version = "*", config = true},
   'jayp0521/mason-null-ls.nvim',
   {
     "L3MON4D3/LuaSnip",
@@ -20,6 +35,12 @@ require('lazy').setup({
     dependencies = { "rafamadriz/friendly-snippets", 'saadparwaiz1/cmp_luasnip' },
   },
   'dinhhuy258/git.nvim',
+  {
+    'mrcjkb/rustaceanvim',
+    version = '^4', -- Recommended
+    ft = { 'rust' },
+    -- https://github.com/mrcjkb/rustaceanvim
+  },
   'lewis6991/gitsigns.nvim',
   'vim-jp/vimdoc-ja',
   'kylechui/nvim-surround',
@@ -40,6 +61,11 @@ require('lazy').setup({
   'nvim-lua/plenary.nvim',
   'nvim-lua/telescope.nvim',
   'nvim-lualine/lualine.nvim',
+  {
+    'windwp/nvim-autopairs',
+    event = "InsertEnter",
+    config = true
+  },
   {
     "kylechui/nvim-surround",
     version = "*", -- Use for stability; omit to use `main` branch for the latest features
@@ -80,6 +106,63 @@ require('lazy').setup({
   {
     'numToStr/Comment.nvim',
     opts = {}
+  },
+  {
+    -- https://github.com/mfussenegger/nvim-dap/wiki/Debug-Adapter-installation
+    "jay-babu/mason-nvim-dap.nvim",
+    dependencies = {
+      "williamboman/mason.nvim",
+      "mfussenegger/nvim-dap",
+    },
+    config = function()
+      require("mason").setup()
+      require("mason-nvim-dap").setup({
+        handlers = {
+          function(config)
+            require('mason-nvim-dap').default_setup(config)
+          end,
+        },
+      })
+    end,
+  },
+  {
+    "nvim-neo-tree/neo-tree.nvim",
+    branch = "v3.x",
+    dependencies = {
+      "nvim-lua/plenary.nvim",
+      "nvim-tree/nvim-web-devicons", -- not strictly required, but recommended
+      "MunifTanjim/nui.nvim",
+      -- "3rd/image.nvim", -- Optional image support in preview window: See `# Preview Mode` for more information
+    }
+  },
+  {
+    "elixir-tools/elixir-tools.nvim",
+    version = "*",
+    event = { "BufReadPre", "BufNewFile" },
+    config = function()
+      local elixir = require("elixir")
+      local elixirls = require("elixir.elixirls")
+
+      elixir.setup {
+        nextls = {enable = true},
+        credo = {},
+        elixirls = {
+          enable = true,
+          settings = elixirls.settings {
+            dialyzerEnabled = false,
+            enableTestLenses = false,
+          },
+          on_attach = function(client, bufnr)
+            vim.keymap.set("n", "<space>fp", ":ElixirFromPipe<cr>", { buffer = true, noremap = true })
+            vim.keymap.set("n", "<space>tp", ":ElixirToPipe<cr>", { buffer = true, noremap = true })
+            vim.keymap.set("v", "<space>em", ":ElixirExpandMacro<cr>", { buffer = true, noremap = true })
+          end,
+        }
+      }
+    end,
+    dependencies = {
+      "nvim-lua/plenary.nvim",
+    },
   }
 })
 
@@ -158,7 +241,6 @@ mason_lspconfig.setup({
     'html',
     'cssmodules_ls',
     "gopls",
-    "rust_analyzer",
     "taplo",
 
   },
@@ -274,7 +356,8 @@ local status, treesitter = pcall(require, "nvim-treesitter.configs")
 if (not status) then return end
 
 treesitter.setup {
-  ensure_installed = { "vim",
+  ensure_installed = { 
+    "vim",
     "dockerfile",
     "typescript",
     "tsx",
@@ -291,6 +374,7 @@ treesitter.setup {
     "html",
     "python",
     "rust",
+    "elixir",
   },
   highlight = {
     enable = false,
@@ -344,3 +428,5 @@ map('n', '<C-j>', '<Cmd>BufferPrevious<CR>', opts)
 map('n', '<C-k>', '<Cmd>BufferNext<CR>', opts)
 -- Close buffer
 map('n', '<leader>e', '<Cmd>BufferClose<CR>', opts)
+
+require("elixir").setup()
